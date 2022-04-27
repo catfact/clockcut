@@ -67,21 +67,23 @@ end
 
 init = function()
     -- clock multiplier param
-    params:add_option('mul', 'mul', mul_keys, function(index) 
+    params:add({type='option', id='mul', name='mul', 
+        options=mul_keys, default=7, action=function(index) 
         clock_mul = muls[index][1]
         str = muls[index][2]
         param_str['clock_mul'] = 'clock_mul: '..str
         screen_dirty = true
-    end)
+    end})
 
     -- rate param
-    params:add_option('rate', 'rate', mul_keys, function(index) 
+    params:add({type='option',id='rate', name='rate', 
+        options=mul_keys, default=7, action=function(index) 
         local rate = muls[index][1]
         local str = muls[index][2]
         softcut.rate(1, rate)
         param_str['rate'] = 'rate: '..str
         screen_dirty = true
-    end)    
+    end})
 
     -- softcut level params
     for _,pair in ipairs({
@@ -90,19 +92,21 @@ init = function()
      }) do
         local id = pair[1]
         local defaultIndex = pair[2]
-        params:add_option(id, id, taper.db_128, defaultIndex)
-        params[id].action = function(index)
-            set_softcut_level_param(id, index)
-        end
+        params:add({type='option', id=id, name=id, 
+            options=taper.db_128, default=defaultIndex, action=function(index)    
+            print('wtf?? : '..id)
+            print('handling level param: '..id..' '..index)
+--            set_softcut_level_param(id, index)
+        end})
     end
 
     -- fade time parameter
-    params:add_number('fade_ms', 'fade_ms', 0, 1000, 50)
-    params['fade_ms'].action = function(ms)
+    params:add({type='number', id='fade_ms', name='fade_ms', 
+        min=0, max=1000, default=50,  action = function(ms)
         softcut.fade_time(1, ms * 0.001)
         param_str['fade_ms'] = 'fade_ms: '..ms .. 'ms'
         screen_dirty = true
-    end
+    end})
 
     -- TODO: more params! if you want
 

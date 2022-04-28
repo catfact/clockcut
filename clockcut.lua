@@ -62,18 +62,34 @@ function set_softcut_level_param(id, index)
     screen_dirty = true
 end
 
+-- a hack for arbitrary option strings
+function hack_opt_string_taper(id, table)
+    local p = params.params[params.lookup[id]]
+    p.string = function(self)
+        return taper.db_128[self.selected]
+    end
+end
+
+function hack_opt_string_mul(id, table)
+    local p = params.params[params.lookup[id]]
+    p.string = function(self)
+        return muls[self.selected][2]
+    end
+end
+
 --------------------------
 -- norns API overwrites
 
 init = function()
     -- clock multiplier param
-    params:add({type='option', id='mul', name='mul', 
+    params:add({type='option', id='clock_mul', name='clock_mul', 
         options=mul_keys, default=7, action=function(index) 
         clock_mul = muls[index][1]
         str = muls[index][2]
         param_str['clock_mul'] = 'clock_mul: '..str
         screen_dirty = true
     end})
+    hack_opt_string_mul('clock_mul')
 
     -- rate param
     params:add({type='option',id='rate', name='rate', 
@@ -84,6 +100,7 @@ init = function()
         param_str['rate'] = 'rate: '..str
         screen_dirty = true
     end})
+    hack_opt_string_mul('rate')
 
     -- softcut level params
     for _,pair in ipairs({
@@ -96,6 +113,7 @@ init = function()
             options=taper.db_128, default=defaultIndex, action=function(index)    
             set_softcut_level_param(id, index)
         end})
+        hack_opt_string_taper(id)
     end
 
     -- fade time parameter
@@ -113,7 +131,6 @@ init = function()
 	audio.level_adc_cut(1)
 	audio.level_eng_cut(1)
     
-
     softcut.level(1,1.0)
 	softcut.level_input_cut(1, 1, 1.0)
 	softcut.level_input_cut(2, 1, 1.0)

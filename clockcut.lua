@@ -1,6 +1,7 @@
 
 local sequins = require 'sequins'
 local taper = include 'lib/taper'
+--local eq = include 'lib/eq'
 
 engine.name = 'None'
 
@@ -30,11 +31,10 @@ muls = {
     {4, "4"},
 }
 
-mul_keys = {}
-for k,_ in pairs(muls) do 
-    table.insert(mul_keys, k)
+mul_str = {}
+for i=1,#muls do 
+    table.insert(mul_str, muls[i][2])
 end
-table.sort(mul_keys)
 
 --- our clock routine
 clock_loop = function()
@@ -62,45 +62,28 @@ function set_softcut_level_param(id, index)
     screen_dirty = true
 end
 
--- a hack for arbitrary option strings
-function hack_opt_string_taper(id, table)
-    local p = params.params[params.lookup[id]]
-    p.string = function(self)
-        return taper.db_128[self.selected]
-    end
-end
-
-function hack_opt_string_mul(id, table)
-    local p = params.params[params.lookup[id]]
-    p.string = function(self)
-        return muls[self.selected][2]
-    end
-end
-
 --------------------------
 -- norns API overwrites
 
 init = function()
     -- clock multiplier param
     params:add({type='option', id='clock_mul', name='clock_mul', 
-        options=mul_keys, default=7, action=function(index) 
+        options=mul_str, default=7, action=function(index)
         clock_mul = muls[index][1]
         str = muls[index][2]
         param_str['clock_mul'] = 'clock_mul: '..str
         screen_dirty = true
     end})
-    hack_opt_string_mul('clock_mul')
 
     -- rate param
     params:add({type='option',id='rate', name='rate', 
-        options=mul_keys, default=7, action=function(index) 
+        options=mul_str, default=7, action=function(index) 
         local rate = muls[index][1]
         local str = muls[index][2]
         softcut.rate(1, rate)
         param_str['rate'] = 'rate: '..str
         screen_dirty = true
     end})
-    hack_opt_string_mul('rate')
 
     -- softcut level params
     for _,pair in ipairs({
@@ -113,7 +96,6 @@ init = function()
             options=taper.db_128, default=defaultIndex, action=function(index)    
             set_softcut_level_param(id, index)
         end})
-        hack_opt_string_taper(id)
     end
 
     -- fade time parameter
@@ -136,11 +118,11 @@ init = function()
 	softcut.level_input_cut(2, 1, 1.0)
 	softcut.pan(1, 0.0)
 
-	softcut.filter_dry(1, 0.125);
-	softcut.filter_fc(1, 1200);
-	softcut.filter_lp(1, 0);
-	softcut.filter_bp(1, 1.0);
-	softcut.filter_rq(1, 2.0);
+	softcut.filter_dry(1, 1)
+	softcut.filter_lp(1, 0)
+	softcut.filter_hp(1, 0)
+	softcut.filter_bp(1, 0)
+	softcut.filter_br(1, 0)
 
     softcut.enable(1, 1)
     softcut.play(1, 1)
@@ -168,10 +150,14 @@ end
 
 redraw = function()
     screen.clear()
-    screen.move(10, 10-4); screen.text(param_str['rec_level'])
-    screen.move(10, 20-4); screen.text(param_str['pre_level'])
-    screen.move(10, 30-4); screen.text(param_str['clock_mul'])
-    screen.move(10, 40-4); screen.text(param_str['rate'])
-    screen.move(10, 50-4); screen.text(param_str['fade_ms'])
+    screen.move(8, 10-2); screen.text(param_str['rec_level'])
+    screen.move(8, 20-2); screen.text(param_str['pre_level'])
+    screen.move(8, 30-2); screen.text(param_str['clock_mul'])
+    screen.move(8, 40-2); screen.text(param_str['rate'])
+    screen.move(8, 50-2); screen.text(param_str['fade_ms'])
     screen.update()
+end
+
+cleanup = function()
+    screen_timer:stop()
 end

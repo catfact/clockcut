@@ -1,20 +1,39 @@
+-- clockcut
+--
+-- simple clocked looper
+--
+-- no UI at the moment,
+-- designed for MIDI mapping
 
-local sequins = require 'sequins'
-local taper = include 'lib/taper'
---local eq = include 'lib/eq'
+local Sequins = require 'sequins'
+local Taper = include 'lib/taper'
+local Eq = include 'lib/eq'
+local ControlSpec = require 'controlspec'
 
 engine.name = 'None'
 
+
+------------------------------------------------
+---- state
+
 -- start point in the buffer, in seconds
---- TODO: try scrubbing this around!
-t0 = 1
+-- TODO: try scrubbing this around!
+start_position = 1
+-- ^NB: this is 1 second, nothing to do with base-1
+-- that is in case negative rates are added, necessitating pre-roll
 
 -- a sequence of clock duration multipliers
 -- (scaled by our master multiplier parameter)
 -- TODO: make this non-trivial!
 sequence = {1}
 
---- some helper stuff for multiplier params
+speed_base_ratio=1
+speed_tune_ratio=1
+
+-------------------------------------------------
+--- helpers
+
+--- multiplier param display
 muls = { 
     {1/4, "1/4"},
     {1/3, "1/3"},
@@ -38,10 +57,10 @@ end
 
 --- our clock routine
 clock_loop = function()
-    local seq = sequins(sequence)
+    local seq = Sequins(sequence)
     while(true) do
         -- we'll simply tell softcut to jump back to the start on each tick
-        softcut.position(1, t0)
+        softcut.position(1, start_position)
         clock.sync(clock_mul * seq())
     end
 end
@@ -55,8 +74,8 @@ end
 
 -- setter for softcut params, also updates UI state
 function set_softcut_level_param(id, index)
-    local amp = taper.amp_128[index]
-    local db = taper.db_128[index]
+    local amp = Taper.amp_128[index]
+    local db = Taper.db_128[index]
     softcut[id](1, amp)
     param_str[id] = id..': '..db..'dB'
     screen_dirty = true
@@ -75,13 +94,22 @@ init = function()
         screen_dirty = true
     end})
 
-    -- rate param
-    params:add({type='option',id='rate', name='rate', 
-        options=mul_str, default=7, action=function(index) 
-        local rate = muls[index][1]
+    -- speed ratio param
+    params:add({type='option',id='speed_ratio', name='speed_ratio', 
+        options=mul_str, default=7, action=function(index)
         local str = muls[index][2]
-        softcut.rate(1, rate)
-        param_str['rate'] = 'rate: '..str
+        speed_base_ratio =  muls[index][1]
+        softcut.rate(1, speed_base_ratio * speed_tune_ratio)
+        param_str['speed_ratio'] = 'speed_ratio: '..str
+        screen_dirty = true
+    end})
+
+    -- speed tuning param
+    params:add({type="number", id='speed_tune', name='speed_tune',
+        min=-200, max=200, default=0, action=function(cents)
+        speed_base_tune = 2 ^ (cents/1200)
+        softcut.rate(1, speed_base_ratio * speed_base_tune)
+        param_str['speed_tune'] = 'speed_tune: '..str
         screen_dirty = true
     end})
 
@@ -93,7 +121,7 @@ init = function()
         local id = pair[1]
         local defaultIndex = pair[2]
         params:add({type='option', id=id, name=id, 
-            options=taper.db_128, default=defaultIndex, action=function(index)    
+            options=Taper.db_128, default=defaultIndex, action=function(index)    
             set_softcut_level_param(id, index)
         end})
     end
@@ -108,6 +136,26 @@ init = function()
 
     -- TODO: more params! if you want
 
+
+--[[
+    -- the EQ class is a helper abstraction over the softcut SVF
+    eq = Eq.new(1)
+    params:add({id='eq_mix', type='control', min=0, max=1, default=1, action=function(x)
+        eq:set_mix(x); eq:apply()
+    end})
+    params:add({id='eq_fc', type='control', min=0, max=1, default=0, action=function(x)
+        eq:set_fc(x); eq:apply()
+    end, spec=ControlSpec.new(20, 16000, 'exp', 0, 1200, "hz")})
+    params:add({id='eq_tilt', type='control', min=-1, max=1, default=0, action=function(x)
+        eq:set_tilt(x); eq:apply()
+    end})
+    params:add({id='eq_gain', type='control', min=-1, max=1, default=0, action=function(x)
+        eq:set_gain(x); eq:apply()
+    end})
+    params:add({id='eq_rez', type='control', min=0, max=1, default=0, action=function(x)
+        eq:set_rez(x); eq:apply()
+    end})
+--]]
     -- other non-default softcut settings
 	audio.level_cut(1)
 	audio.level_adc_cut(1)
@@ -153,8 +201,9 @@ redraw = function()
     screen.move(8, 10-2); screen.text(param_str['rec_level'])
     screen.move(8, 20-2); screen.text(param_str['pre_level'])
     screen.move(8, 30-2); screen.text(param_str['clock_mul'])
-    screen.move(8, 40-2); screen.text(param_str['rate'])
-    screen.move(8, 50-2); screen.text(param_str['fade_ms'])
+    screen.move(8, 40-2); screen.text(param_str['speed_ratio'])
+    screen.move(8, 50-2); screen.text(param_str['speed_tune'])
+    screen.move(8, 60-2); screen.text(param_str['fade_ms'])
     screen.update()
 end
 

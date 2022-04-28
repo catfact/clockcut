@@ -6,7 +6,8 @@
 Eq = {}
 Eq.__index = Eq
 
-Eq.GAIN_DB = 12
+Eq.SELECT_GAIN = 2
+Eq.SELECT_GAIN_INV = 1 - (1/Eq.SELECT_GAIN)
 
 Eq.commands = {
     'dry',
@@ -27,10 +28,10 @@ local function tilt_fade(x)
 end
 
 -- symmetric boost/cut by 12db
-local function gain_fade(x)
-    -- FIXME: make this approximately logarithmic/EP
-    local l = x * 4
-    local r = 1 - (x * 0.75)
+local function select_fade(x)
+    -- TODO: needs some work...
+    local l = x * Eq.SELECT_GAIN
+    local r = 1 - (x * Eq.SELECT_GAIN_INV)
     return l, r
 end
 
@@ -39,7 +40,7 @@ function Eq.new(voice, post)
     -- parameter mapping values
     x.params = {
         -- our interface:
-        tilt=0, gain=0, rez=0, mix=0,
+        tilt=0, select=0, rez=0, mix=0,
         -- tmp:
         wet=0, shelf=0,
         -- softcut API:
@@ -66,23 +67,22 @@ end
 -- at zero, equal-power mix
 function Eq:set_tilt(pos)
     self.params.tilt = pos
-    local lp, hp
-    lp, hp = tilt_fade(pos)
+    local hp, lp = tilt_fade(pos)
     self.params.lp = lp
     self.params.hp = hp
 end
 
 -- boost or cut around the center frequency
-function Eq:set_gain(amt)
+function Eq:set_select(amt)
     local peak, shelf
-    self.params.gain = amt
+    self.params.select = amt
     if amt > 0 then
-        peak, shelf = gain_fade(amt)
+        peak, shelf = select_fade(amt)
         self.params.bp = peak
         self.params.br = 0
         self.params.shelf = shelf
     else
-        peak, shelf = gain_fade(amt * -1)
+        peak, shelf = select_fade(amt * -1)
         self.params.bp = 0
         self.params.br = peak
         self.params.shelf = shelf
@@ -100,8 +100,7 @@ end
 -- set the mix amount
 function Eq:set_mix(amt)    
     self.params.mix = amt
-    -- fixme: shuld be EP maybe
-    local d, w = amt, -amt
+    local w, d = amt, 1-amt
     self.params.dry = d
     self.params.wet = w 
 end
@@ -114,7 +113,7 @@ end
 
 -- update softcut with the object's param state
 function Eq:apply()
-    tab.print(self.params)
+    --tab.print(self.params)
     local wetshelf = self.params.wet * self.params.shelf
     softcut[self.commands.dry](self.voice, self.params.dry)
     softcut[self.commands.lp](self.voice, self.params.lp * wetshelf)

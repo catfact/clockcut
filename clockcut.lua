@@ -141,7 +141,7 @@ init = function()
     params:add({id='eq_fc', type='control', 
         controlspec=ControlSpec.new(20, 16000, 'exp', 0, 1200, "hz"), action=function(x)
         eq:set_fc(x); eq:apply()
-        param_str['eq_mix'] = 'mix: '..x
+        param_str['eq_fc'] = 'fc: '..x
         screen_dirty = true
     end, })
     params:add({id='eq_tilt', type='control', 
@@ -150,10 +150,10 @@ init = function()
         param_str['eq_tilt'] = 'tilt: '..x
         screen_dirty = true
     end})
-    params:add({id='eq_gain', type='control', 
+    params:add({id='eq_select', type='control', 
         controlspec=ControlSpec.new(-1, 1, 'lin', 0, 0, ""), action=function(x)
-        eq:set_gain(x); eq:apply()
-        param_str['eq_gain'] = 'gain: '..x
+        eq:set_select(x); eq:apply()
+        param_str['eq_select'] = 'select: '..x
         screen_dirty = true
     end})
     params:add({id='eq_rez',type='control', 
@@ -213,9 +213,10 @@ redraw = function()
     screen.move(4, 60-2); screen.text(param_str['fade_ms'])
 
     screen.move(64, 10-2); screen.text(param_str['eq_mix'])
-    screen.move(64, 20-2); screen.text(param_str['eq_tilt'])
-    screen.move(64, 30-2); screen.text(param_str['eq_gain'])
-    screen.move(64, 40-2); screen.text(param_str['eq_rez'])
+    screen.move(64, 20-2); screen.text(param_str['eq_fc'])
+    screen.move(64, 30-2); screen.text(param_str['eq_tilt'])
+    screen.move(64, 40-2); screen.text(param_str['eq_select'])
+    screen.move(64, 50-2); screen.text(param_str['eq_rez'])
     screen.update()
 end
 

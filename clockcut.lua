@@ -68,18 +68,6 @@ end
 --- UI state
 screen_dirty = false
 param_str = {}
-for _,id in ipairs({'rec_level', 'pre_level'}) do
-    param_str[id] = id
-end
-
--- setter for softcut params, also updates UI state
-function set_softcut_level_param(id, index)
-    local amp = Taper.amp_128[index]
-    local db = Taper.db_128[index]
-    softcut[id](1, amp)
-    param_str[id] = id..': '..db..'dB'
-    screen_dirty = true
-end
 
 --------------------------
 -- norns API overwrites
@@ -90,7 +78,7 @@ init = function()
         options=mul_str, default=7, action=function(index)
         clock_mul = muls[index][1]
         str = muls[index][2]
-        param_str['clock_mul'] = 'clock_mul: '..str
+        param_str['clock_mul'] = 'mul: '..str
         screen_dirty = true
     end})
 
@@ -100,7 +88,7 @@ init = function()
         local str = muls[index][2]
         speed_base_ratio =  muls[index][1]
         softcut.rate(1, speed_base_ratio * speed_tune_ratio)
-        param_str['speed_ratio'] = 'speed_ratio: '..str
+        param_str['speed_ratio'] = 'ratio: '..str
         screen_dirty = true
     end})
 
@@ -109,22 +97,29 @@ init = function()
         min=-200, max=200, default=0, action=function(cents)
         speed_base_tune = 2 ^ (cents/1200)
         softcut.rate(1, speed_base_ratio * speed_base_tune)
-        param_str['speed_tune'] = 'speed_tune: '..cents
+        param_str['speed_tune'] = 'tune: '..cents
         screen_dirty = true
     end})
 
-    -- softcut level params
-    for _,pair in ipairs({
-        {'rec_level', 128},
-        {'pre_level', 112}
-     }) do
-        local id = pair[1]
-        local defaultIndex = pair[2]
-        params:add({type='option', id=id, name=id, 
-            options=Taper.db_128, default=defaultIndex, action=function(index)    
-            set_softcut_level_param(id, index)
-        end})
-    end
+    params:add({type='option', id='rec_level', name='rec_level', 
+        options=Taper.db_128, default=defaultIndex, action=function(index)    
+            local amp = Taper.amp_128[index]
+            local db = Taper.db_128[index]
+            softcut.rec_level(1, amp)
+            param_str.rec_level = 'rec: '..db
+            screen_dirty = true
+        end
+    })
+
+    params:add({type='option', id='pre_level', name='pre_level', 
+        options=Taper.db_128, default=defaultIndex, action=function(index)    
+            local amp = Taper.amp_128[index]
+            local db = Taper.db_128[index]
+            softcut.pre_level(1, amp)
+            param_str.pre_level = 'pre: '..db
+            screen_dirty = true
+        end
+    })
 
     -- fade time parameter
     params:add({type='number', id='fade_ms', name='fade_ms', 
@@ -136,26 +131,38 @@ init = function()
 
     -- TODO: more params! if you want
 
-
---[[
     -- the EQ class is a helper abstraction over the softcut SVF
     eq = Eq.new(1)
     params:add({id='eq_mix', type='control', min=0, max=1, default=1, action=function(x)
         eq:set_mix(x); eq:apply()
+        param_str['eq_mix'] = 'mix: '..x
+        screen_dirty = true
     end})
-    params:add({id='eq_fc', type='control', min=0, max=1, default=0, action=function(x)
+    params:add({id='eq_fc', type='control', 
+        controlspec=ControlSpec.new(20, 16000, 'exp', 0, 1200, "hz"), action=function(x)
         eq:set_fc(x); eq:apply()
-    end, spec=ControlSpec.new(20, 16000, 'exp', 0, 1200, "hz")})
-    params:add({id='eq_tilt', type='control', min=-1, max=1, default=0, action=function(x)
+        param_str['eq_mix'] = 'mix: '..x
+        screen_dirty = true
+    end, })
+    params:add({id='eq_tilt', type='control', 
+        controlspec=ControlSpec.new(-1, 1, 'lin', 0, 0, ""), action=function(x)
         eq:set_tilt(x); eq:apply()
+        param_str['eq_tilt'] = 'tilt: '..x
+        screen_dirty = true
     end})
-    params:add({id='eq_gain', type='control', min=-1, max=1, default=0, action=function(x)
+    params:add({id='eq_gain', type='control', 
+        controlspec=ControlSpec.new(-1, 1, 'lin', 0, 0, ""), action=function(x)
         eq:set_gain(x); eq:apply()
+        param_str['eq_gain'] = 'gain: '..x
+        screen_dirty = true
     end})
-    params:add({id='eq_rez', type='control', min=0, max=1, default=0, action=function(x)
+    params:add({id='eq_rez',type='control', 
+        controlspec=ControlSpec.new(0, 1, 'lin', 0, 0, ""), action=function(x)
         eq:set_rez(x); eq:apply()
+        param_str['eq_rez'] = 'rez: '..x
+        screen_dirty = true
     end})
---]]
+
     -- other non-default softcut settings
 	audio.level_cut(1)
 	audio.level_adc_cut(1)
@@ -198,12 +205,17 @@ end
 
 redraw = function()
     screen.clear()
-    screen.move(8, 10-2); screen.text(param_str['rec_level'])
-    screen.move(8, 20-2); screen.text(param_str['pre_level'])
-    screen.move(8, 30-2); screen.text(param_str['clock_mul'])
-    screen.move(8, 40-2); screen.text(param_str['speed_ratio'])
-    screen.move(8, 50-2); screen.text(param_str['speed_tune'])
-    screen.move(8, 60-2); screen.text(param_str['fade_ms'])
+    screen.move(4, 10-2); screen.text(param_str['rec_level'])
+    screen.move(4, 20-2); screen.text(param_str['pre_level'])
+    screen.move(4, 30-2); screen.text(param_str['clock_mul'])
+    screen.move(4, 40-2); screen.text(param_str['speed_ratio'])
+    screen.move(4, 50-2); screen.text(param_str['speed_tune'])
+    screen.move(4, 60-2); screen.text(param_str['fade_ms'])
+
+    screen.move(64, 10-2); screen.text(param_str['eq_mix'])
+    screen.move(64, 20-2); screen.text(param_str['eq_tilt'])
+    screen.move(64, 30-2); screen.text(param_str['eq_gain'])
+    screen.move(64, 40-2); screen.text(param_str['eq_rez'])
     screen.update()
 end
 

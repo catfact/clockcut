@@ -109,7 +109,7 @@ init = function()
         min=-200, max=200, default=0, action=function(cents)
         speed_base_tune = 2 ^ (cents/1200)
         softcut.rate(1, speed_base_ratio * speed_base_tune)
-        param_str['speed_tune'] = 'speed_tune: '..str
+        param_str['speed_tune'] = 'speed_tune: '..cents
         screen_dirty = true
     end})
 

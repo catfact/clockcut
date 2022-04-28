@@ -2,7 +2,7 @@
 
 simple demonstration of clocked looping / delay with `softcut` on norns
 
-# usage
+## usage
 
 at present, the demo has no interactive UI. it exposes parameters which are designed for MIDI mapping.
 
@@ -17,3 +17,16 @@ at present, the demo has no interactive UI. it exposes parameters which are desi
 - `rec_level`: level at which input is written to the buffer
 
 - `pre_level`: level at which existing buffer contents are preserved
+
+- `fade_ms`: crossfade duration in milliseconds
+
+## TODO:
+
+- raw midi clock mode (handle PPQ ticks directly)
+- finish/test EQ abstraction
+- trigger params to reset, clear, etc
+- more voices?
+- duration sequences
+- position sequences?
+- more UI? (show phase?)
+

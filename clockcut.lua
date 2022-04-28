@@ -94,8 +94,6 @@ init = function()
         local defaultIndex = pair[2]
         params:add({type='option', id=id, name=id, 
             options=taper.db_128, default=defaultIndex, action=function(index)    
-            print('wtf?? : '..id)
-            --print('handling level param: '..id..' '..index)
             set_softcut_level_param(id, index)
         end})
     end
@@ -153,7 +151,10 @@ end
 
 redraw = function()
     screen.clear()
-    screen.move(10, 10); screen.text(param_str['rec_level'])
-    screen.move(10, 30); screen.text(param_str['pre_level'])
+    screen.move(10, 10-4); screen.text(param_str['rec_level'])
+    screen.move(10, 20-4); screen.text(param_str['pre_level'])
+    screen.move(10, 30-4); screen.text(param_str['clock_mul'])
+    screen.move(10, 40-4); screen.text(param_str['rate'])
+    screen.move(10, 50-4); screen.text(param_str['fade_ms'])
     screen.update()
 end
